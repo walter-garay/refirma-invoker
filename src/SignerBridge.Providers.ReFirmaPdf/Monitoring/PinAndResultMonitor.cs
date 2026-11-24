@@ -90,12 +90,33 @@ internal static class PinAndResultMonitor
                     string dialogText = await ReadDialogLabelsAsync(jab, alertWin.Value, ct).ConfigureAwait(false);
                     await DismissDialogAsync(jab, alertWin.Value, ct).ConfigureAwait(false);
 
-                    if (LooksLikeErrorDialog(dialogText))
+                    if (LooksLikeErrorDialog(dialogText) || !AreAllOutputPdfsReady(context.OutputDirectory, expectedCount))
+                    {
+                        var errCode = ClassifyUiError(dialogText);
+                        return new SignExecutionResult(
+                            Success: false,
+                            ErrorCode: errCode,
+                            ErrorDetail: string.IsNullOrWhiteSpace(dialogText)
+                                ? "La operación de firma fue cancelada o no generó los PDFs firmados."
+                                : dialogText,
+                            Cancelled: errCode == SignErrorCode.USER_CANCELLED_PIN);
+                    }
+                }
+
+                // If PIN dialog closed, no error modal is shown, 0 PDFs generated and >5s elapsed, user likely cancelled PIN dialog directly
+                if (phaseWatch.Elapsed.TotalSeconds > 5 &&
+                    !Directory.EnumerateFiles(context.OutputDirectory, "*.pdf").Any())
+                {
+                    var batchStillOpen = await jab.FindJavaWindowAsync(
+                        t => t.Contains("Parámetros de firma", StringComparison.OrdinalIgnoreCase) ||
+                             t.Contains("Declaración", StringComparison.OrdinalIgnoreCase), ct).ConfigureAwait(false);
+                    if (batchStillOpen is null)
                     {
                         return new SignExecutionResult(
                             Success: false,
-                            ErrorCode: ClassifyUiError(dialogText),
-                            ErrorDetail: string.IsNullOrWhiteSpace(dialogText) ? "ReFirma PDF reportó un error al firmar." : dialogText);
+                            ErrorCode: SignErrorCode.USER_CANCELLED_PIN,
+                            ErrorDetail: "El usuario canceló o cerró el diálogo de PIN sin generar documentos firmados.",
+                            Cancelled: true);
                     }
                 }
 
