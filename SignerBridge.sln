@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5EB22EBD-7775-4ED1-B77D-D16CAFBA6D49}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignerBridge.Core", "src\SignerBridge.Core\SignerBridge.Core.csproj", "{C18BA6F3-CB95-4EC9-B446-78B96D92B70B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignerBridge.Providers.ReFirmaPdf", "src\SignerBridge.Providers.ReFirmaPdf\SignerBridge.Providers.ReFirmaPdf.csproj", "{20D973C2-1982-473C-A575-DF2188E3FF4B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignerBridge.Host", "src\SignerBridge.Host\SignerBridge.Host.csproj", "{B1356937-5A75-46BE-8801-622F6F420C23}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{411212A4-AC50-4C1B-82FD-1284899DC44E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignerBridge.Core.Tests", "tests\SignerBridge.Core.Tests\SignerBridge.Core.Tests.csproj", "{599615D5-268A-41A5-83DF-4B3096C98C25}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C18BA6F3-CB95-4EC9-B446-78B96D92B70B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C18BA6F3-CB95-4EC9-B446-78B96D92B70B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C18BA6F3-CB95-4EC9-B446-78B96D92B70B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C18BA6F3-CB95-4EC9-B446-78B96D92B70B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20D973C2-1982-473C-A575-DF2188E3FF4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20D973C2-1982-473C-A575-DF2188E3FF4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20D973C2-1982-473C-A575-DF2188E3FF4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20D973C2-1982-473C-A575-DF2188E3FF4B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1356937-5A75-46BE-8801-622F6F420C23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1356937-5A75-46BE-8801-622F6F420C23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1356937-5A75-46BE-8801-622F6F420C23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1356937-5A75-46BE-8801-622F6F420C23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{599615D5-268A-41A5-83DF-4B3096C98C25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{599615D5-268A-41A5-83DF-4B3096C98C25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{599615D5-268A-41A5-83DF-4B3096C98C25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{599615D5-268A-41A5-83DF-4B3096C98C25}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C18BA6F3-CB95-4EC9-B446-78B96D92B70B} = {5EB22EBD-7775-4ED1-B77D-D16CAFBA6D49}
+		{20D973C2-1982-473C-A575-DF2188E3FF4B} = {5EB22EBD-7775-4ED1-B77D-D16CAFBA6D49}
+		{B1356937-5A75-46BE-8801-622F6F420C23} = {5EB22EBD-7775-4ED1-B77D-D16CAFBA6D49}
+		{599615D5-268A-41A5-83DF-4B3096C98C25} = {411212A4-AC50-4C1B-82FD-1284899DC44E}
+	EndGlobalSection
+EndGlobal

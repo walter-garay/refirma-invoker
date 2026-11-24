@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SignerBridge — Cliente Web de Prueba E2E</title>
+  <style>
+    :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --warn: #f59e0b; --err: #ef4444; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+    .card { background: var(--card); border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; border: 1px solid #334155; }
+    h1 { font-size: 1.4rem; margin-top: 0; color: var(--accent); }
+    label { display: block; font-size: .85rem; color: var(--muted); margin-top: .75rem; }
+    input, select, button { width: 100%; box-sizing: border-box; padding: .55rem .75rem; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: var(--text); margin-top: .25rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    button { background: var(--accent); color: #0f172a; font-weight: 600; cursor: pointer; border: none; margin-top: 1rem; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .badge { display: inline-block; padding: .2rem .6rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+    .pin-banner { display: none; background: rgba(245, 158, 11, .15); border: 1px solid var(--warn); color: #fde68a; padding: .85rem; border-radius: 8px; margin-top: .75rem; font-weight: 600; }
+    pre { background: #020617; padding: .75rem; border-radius: 6px; overflow: auto; max-height: 240px; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>SignerBridge — Prueba E2E (ReFirma PDF 1.6)</h1>
+    <div class="row">
+      <div>
+        <label>Endpoint Local</label>
+        <input id="baseUrl" value="http://127.0.0.1:48915" />
+      </div>
+      <div>
+        <label>Token de Pairing (X-Signer-Token)</label>
+        <input id="token" placeholder="Pega el token desde el System Tray" />
+      </div>
+    </div>
+    <button id="btnHealth" type="button">1. Verificar Conexión (/v1/health)</button>
+    <pre id="healthOut">Sin verificar...</pre>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Archivos PDF o ZIP</label>
+        <input id="files" type="file" multiple accept=".pdf,.zip" />
+      </div>
+      <div>
+        <label>Certificado (MatchBy + Query)</label>
+        <div class="row">
+          <select id="matchBy">
+            <option value="AUTO">AUTO</option>
+            <option value="FULL_NAME">APELLIDOS Nombres</option>
+            <option value="FIR">FIR</option>
+            <option value="SN">SN (Serial)</option>
+          </select>
+          <input id="certQuery" placeholder="Ej: VALDIVIA o 09428893" />
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Motivo</label>
+        <select id="reason">
+          <option value="Soy el autor del documento">Soy el autor del documento</option>
+          <option value="En señal de conformidad">En señal de conformidad</option>
+          <option value="Doy V° B°">Doy V° B°</option>
+          <option value="Por encargo">Por encargo</option>
+          <option value="Doy fe">Doy fe</option>
+        </select>
+      </div>
+      <div>
+        <label>Nivel / Sello / Coordenadas X, Y</label>
+        <div class="row">
+          <input id="coordX" type="number" value="120" placeholder="X" />
+          <input id="coordY" type="number" value="450" placeholder="Y" />
+        </div>
+      </div>
+    </div>
+
+    <button id="btnSign" type="button">2. Enviar Lote a Firmar</button>
+    <div id="pinBanner" class="pin-banner">
+      ATENCIÓN: ReFirma PDF está esperando que ingreses manualmente tu PIN de Firma.
+    </div>
+    <pre id="logOut">Esperando trabajo...</pre>
+    <button id="btnDownload" type="button" style="display:none; background: var(--ok);">3. Descargar ZIP Firmado</button>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let currentJobId = null;
+
+    function log(msg) {
+      $('logOut').textContent += `\n[${new Date().toLocaleTimeString()}] ${msg}`;
+      $('logOut').scrollTop = $('logOut').scrollHeight;
+    }
+
+    $('btnHealth').onclick = async () => {
+      try {
+        const res = await fetch(`${$('baseUrl').value}/v1/health`, {
+          headers: { 'X-Signer-Token': $('token').value }
+        });
+        const data = await res.json();
+        $('healthOut').textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        $('healthOut').textContent = 'Error: ' + e.message;
+      }
+    };
+
+    $('btnSign').onclick = async () => {
+      const files = $('files').files;
+      if (!files.length) return alert('Selecciona al menos un PDF o ZIP.');
+
+      $('logOut').textContent = 'Creando job...';
+      $('pinBanner').style.display = 'none';
+      $('btnDownload').style.display = 'none';
+
+      const form = new FormData();
+      if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+        form.append('archive', files[0]);
+      } else {
+        for (const f of files) form.append('files', f);
+      }
+
+      const payload = {
+        provider: 'refirma-pdf',
+        certificate: { matchBy: $('matchBy').value, query: $('certQuery').value },
+        signature: {
+          visible: true,
+          reason: $('reason').value,
+          position: {
+            mode: 'XY',
+            x: parseInt($('coordX').value, 10) || 120,
+            y: parseInt($('coordY').value, 10) || 450
+          }
+        }
+      };
+      form.append('payload', JSON.stringify(payload));
+
+      const res = await fetch(`${$('baseUrl').value}/v1/sign/jobs`, {
+        method: 'POST',
+        headers: { 'X-Signer-Token': $('token').value },
+        body: form
+      });
+
+      const job = await res.json();
+      if (!res.ok) return log('Error al crear job: ' + JSON.stringify(job));
+
+      currentJobId = job.jobId;
+      log(`Job creado: ${currentJobId}`);
+
+      const wsUrl = $('baseUrl').value.replace(/^http/, 'ws') + `${job.eventsWsPath}?token=${encodeURIComponent($('token').value)}`;
+      const ws = new WebSocket(wsUrl);
+      ws.onmessage = ev => {
+        const event = JSON.parse(ev.data);
+        log(`${event.Status}: ${event.Message}` + (event.ErrorDetail ? ` (${event.ErrorDetail})` : ''));
+        $('pinBanner').style.display = event.Status === 'WAITING_USER_PIN' ? 'block' : 'none';
+        if (event.Status === 'SUCCEEDED') {
+          $('btnDownload').style.display = 'block';
+        }
+      };
+      ws.onerror = () => log('WebSocket error.');
+    };
+
+    $('btnDownload').onclick = async () => {
+      if (!currentJobId) return;
+      const res = await fetch(`${$('baseUrl').value}/v1/sign/jobs/${currentJobId}/result`, {
+        headers: { 'X-Signer-Token': $('token').value }
+      });
+      if (!res.ok) return alert('Error descargando ZIP');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `signed-${currentJobId}.zip`;
+      a.click();
+    };
+  </script>
+</body>
+</html>

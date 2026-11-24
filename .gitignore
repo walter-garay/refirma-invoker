@@ -1,0 +1,17 @@
+# .NET build artifacts
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+
+# Smoke test temporary files
+tools/SmokeTest/test-in/
+tools/SmokeTest/test-out/
+tools/SmokeTest/__pycache__/
+docs/dumps/*.log
+
+# OS / Editor
+Thumbs.db
+.DS_Store

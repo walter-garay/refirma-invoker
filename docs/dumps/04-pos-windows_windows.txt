@@ -1,0 +1,4 @@
+﻿HWND=2230178 PID=27440 Class='SunAwtDialog' Title='ReFirma PDF - Parámetros de firma digital en lote' isJava=True gotAC=True vm=4130458
+HWND=854854 PID=27440 Class='SunAwtFrame' Title='ReFirma PDF 1.6' isJava=True gotAC=True vm=4130458
+HWND=328310 PID=11040 Class='Chrome_WidgetWin_1' Title='PRD for ReFirma PDF Autom...' isJava=False gotAC=False vm=4130458
+HWND=658340 PID=27348 Class='CabinetWClass' Title='ReFirma Suite - Explorador de archivos' isJava=False gotAC=False vm=4130458
