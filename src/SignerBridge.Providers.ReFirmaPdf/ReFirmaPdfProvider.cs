@@ -91,14 +91,29 @@ public sealed class ReFirmaPdfProvider : ISignerProvider, IDisposable
         var jab = new JabSession(_staDispatcher.Value);
         var logWatcher = new RefirmaLogWatcher(_logFilePath);
 
-        // Phase 3: Launch / Attach + Batch Configuration + Legal Declaration -> Reach PIN Dialog
-        var prePinResult = await ExecutePrePinFlowAsync(jab, context, ct).ConfigureAwait(false);
-        if (!prePinResult.Success)
-            return prePinResult;
+        try
+        {
+            // Phase 3: Launch / Attach + Batch Configuration + Legal Declaration -> Reach PIN Dialog
+            var prePinResult = await ExecutePrePinFlowAsync(jab, context, ct).ConfigureAwait(false);
+            if (!prePinResult.Success)
+            {
+                await ForceCloseReFirmaAsync(jab).ConfigureAwait(false);
+                return prePinResult;
+            }
 
-        // Phase 4: Wait for manual PIN entry and monitor hybrid UI + refirma-pdf.log
-        context.ReportProgress(SignJobStatus.WAITING_USER_PIN, "Esperando que el usuario ingrese el PIN de Firma en ReFirma PDF...");
-        return await PinAndResultMonitor.WaitForPinAndCompletionAsync(jab, logWatcher, context, ct).ConfigureAwait(false);
+            // Phase 4: Wait for manual PIN entry and monitor hybrid UI + refirma-pdf.log
+            context.ReportProgress(SignJobStatus.WAITING_USER_PIN, "Esperando que el usuario ingrese el PIN de Firma en ReFirma PDF...");
+            var finalResult = await PinAndResultMonitor.WaitForPinAndCompletionAsync(jab, logWatcher, context, ct).ConfigureAwait(false);
+            if (!finalResult.Success)
+                await ForceCloseReFirmaAsync(jab).ConfigureAwait(false);
+
+            return finalResult;
+        }
+        catch
+        {
+            await ForceCloseReFirmaAsync(jab).ConfigureAwait(false);
+            throw;
+        }
     }
 
     private async Task<SignExecutionResult> ExecutePrePinFlowAsync(JabSession jab, SignJobContext context, CancellationToken ct)
@@ -175,10 +190,24 @@ public sealed class ReFirmaPdfProvider : ISignerProvider, IDisposable
         if (acepInput is null)
             return new SignExecutionResult(false, SignErrorCode.UI_AUTOMATION_ERROR, "No se encontró el campo de texto para escribir ACEPTO.");
 
+        await jab.BringToForegroundAsync(declWin.Value.Hwnd, ct).ConfigureAwait(false);
+        await Task.Delay(150, ct).ConfigureAwait(false);
         await jab.ClickNodeCenterAsync(acepInput.Value, ct).ConfigureAwait(false);
         await Task.Delay(120, ct).ConfigureAwait(false);
-        await jab.SendKeysToFocusedAsync("ACEPTO", ct).ConfigureAwait(false);
+        await jab.SendKeysToFocusedAsync("^a{BACKSPACE}", ct).ConfigureAwait(false);
+        await Task.Delay(80, ct).ConfigureAwait(false);
+        await jab.SendUnicodeTextAsync("ACEPTO", 35, ct).ConfigureAwait(false);
         await Task.Delay(350, ct).ConfigureAwait(false);
+
+        string typed = (await jab.GetNodeTextAsync(acepInput.Value, ct).ConfigureAwait(false)).Trim();
+        if (!string.Equals(typed, "ACEPTO", StringComparison.Ordinal))
+        {
+            _logger?.LogWarning("Texto en Declaración fue '{Typed}', reintentando con setTextContents + Unicode...", typed);
+            await jab.SetTextContentsAsync(acepInput.Value, string.Empty, ct).ConfigureAwait(false);
+            await Task.Delay(80, ct).ConfigureAwait(false);
+            await jab.SendUnicodeTextAsync("ACEPTO", 50, ct).ConfigureAwait(false);
+            await Task.Delay(350, ct).ConfigureAwait(false);
+        }
 
         var firmarBtn = await jab.FindNodeAsync(declWin.Value, n =>
             n.Info.role_en_US == "push button" && n.Info.name.Equals("Firmar", StringComparison.OrdinalIgnoreCase), ct).ConfigureAwait(false);
@@ -524,6 +553,31 @@ public sealed class ReFirmaPdfProvider : ISignerProvider, IDisposable
         }
 
         return new SignExecutionResult(Success: true);
+    }
+
+    private async Task ForceCloseReFirmaAsync(JabSession jab)
+    {
+        try
+        {
+            var pids = await jab.GetReFirmaPidsAsync(CancellationToken.None).ConfigureAwait(false);
+            foreach (uint pid in pids)
+            {
+                try
+                {
+                    using var proc = Process.GetProcessById((int)pid);
+                    _logger?.LogInformation("Cerrando ReFirma PDF (PID {Pid}) tras fallo/cancelación.", pid);
+                    proc.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "No se pudo cerrar el proceso ReFirma PDF (PID {Pid}).", pid);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error enumerando procesos de ReFirma PDF para cierre tras fallo.");
+        }
     }
 
     public void Dispose()

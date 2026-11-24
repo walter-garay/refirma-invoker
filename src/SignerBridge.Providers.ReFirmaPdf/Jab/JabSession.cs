@@ -131,6 +131,22 @@ internal sealed class JabSession
         return _sta.InvokeAsync(() => System.Windows.Forms.SendKeys.SendWait(keys), ct);
     }
 
+    public Task SendUnicodeTextAsync(string text, int delayMs = 35, CancellationToken ct = default)
+    {
+        return _sta.InvokeAsync(() => Win32.SendUnicodeString(text, delayMs), ct);
+    }
+
+    public Task<List<uint>> GetReFirmaPidsAsync(CancellationToken ct = default)
+    {
+        return _sta.InvokeAsync(() =>
+            Win32.ListVisibleWindows()
+                .Where(w => w.ClassName.Contains("SunAwt", StringComparison.Ordinal) &&
+                            w.Title.Contains("ReFirma PDF", StringComparison.OrdinalIgnoreCase))
+                .Select(w => w.Pid)
+                .Distinct()
+                .ToList(), ct);
+    }
+
     public Task<string> GetNodeTextAsync(JabNode node, CancellationToken ct = default)
     {
         return _sta.InvokeAsync(() =>
