@@ -6,7 +6,13 @@ public sealed class SignerBridgeOptions
 
     public string Host { get; set; } = "127.0.0.1";
     public int Port { get; set; } = 48915;
-    public string[] AllowedOrigins { get; set; } = ["http://localhost", "https://localhost", "http://127.0.0.1"];
+    public string[] AllowedOrigins { get; set; } =
+    [
+        "http://localhost",
+        "https://localhost",
+        "http://127.0.0.1",
+        "https://sigvin.sistemasudh.com"
+    ];
     public string DataDirectory { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SignerBridge");

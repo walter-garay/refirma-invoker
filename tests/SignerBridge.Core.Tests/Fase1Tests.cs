@@ -91,16 +91,17 @@ public sealed class Fase1Tests : IClassFixture<Fase1Tests.TestHostFactory>
         var badOriginRes = await client.SendAsync(badOriginReq);
         Assert.Equal(HttpStatusCode.Forbidden, badOriginRes.StatusCode);
 
-        // 3. OPTIONS preflight with allowed origin -> PNA header
+        // 3. OPTIONS preflight with allowed production origin -> PNA header
         var preflightReq = new HttpRequestMessage(HttpMethod.Options, "/v1/health");
-        preflightReq.Headers.Add("Origin", "http://localhost");
+        preflightReq.Headers.Add("Origin", "https://sigvin.sistemasudh.com");
         var preflightRes = await client.SendAsync(preflightReq);
         Assert.Equal(HttpStatusCode.NoContent, preflightRes.StatusCode);
         Assert.Equal("true", preflightRes.Headers.GetValues("Access-Control-Allow-Private-Network").First());
+        Assert.Equal("https://sigvin.sistemasudh.com", preflightRes.Headers.GetValues("Access-Control-Allow-Origin").First());
 
         // 4. Valid token + allowed origin -> 200 OK
         var okReq = new HttpRequestMessage(HttpMethod.Get, "/v1/health");
-        okReq.Headers.Add("Origin", "http://localhost");
+        okReq.Headers.Add("Origin", "https://sigvin.sistemasudh.com");
         okReq.Headers.Add("X-Signer-Token", _factory.Token);
         var okRes = await client.SendAsync(okReq);
         Assert.Equal(HttpStatusCode.OK, okRes.StatusCode);
